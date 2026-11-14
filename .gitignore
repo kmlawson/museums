@@ -4,3 +4,5 @@ books/
 .DS_Store
 pipeline/
 todo.md
+books.local.js
+Open Reader.command

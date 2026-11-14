@@ -1,0 +1,3 @@
+PDF.js 3.11.174 (pdf.min.js, pdf.worker.min.js), copyright Mozilla Foundation, Apache License 2.0.
+Source: https://github.com/mozilla/pdf.js ; these two files were downloaded unchanged from cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/.
+Used by reader.html to draw PDF pages inside the page.
