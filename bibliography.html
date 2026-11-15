@@ -26,7 +26,7 @@ header p{margin:0;color:var(--muted);max-width:75ch}
 .tab .n{color:var(--muted);font-size:12.5px;margin-left:6px;font-variant-numeric:tabular-nums}
 .tab[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
 .tab[aria-pressed=true] .n{color:#ffffffcc}
-.filters{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;display:grid;grid-template-columns:1.2fr 2fr .55fr .55fr 1fr 1.3fr auto;gap:8px;border-bottom:1px solid var(--line)}
+.filters{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;display:grid;grid-template-columns:1.2fr 1.8fr .55fr .55fr .8fr 1fr 1.3fr auto;gap:8px;border-bottom:1px solid var(--line)}
 .filters label{display:flex;flex-direction:column;font:11px/1.2 -apple-system,"Helvetica Neue",Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);gap:3px;min-width:0}
 .filters input,.filters select{font:14px -apple-system,"Helvetica Neue",Arial,sans-serif;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-width:0;width:100%}
 .filters button{align-self:end;font:13px -apple-system,"Helvetica Neue",Arial,sans-serif;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer}
@@ -86,6 +86,7 @@ nav.top{font:13px -apple-system,"Helvetica Neue",Arial,sans-serif;color:var(--mu
     <label>Title / journal / publisher<input id="ft" type="search" placeholder="e.g. natural history, British Museum"></label>
     <label>Year from<input id="y1" type="number" placeholder="1753"></label>
     <label>Year to<input id="y2" type="number" placeholder="2023"></label>
+    <label>Type<select id="ty"><option value="">any type</option><option value="book">book</option><option value="article">article</option><option value="chapter">chapter</option><option value="other">other</option></select></label>
     <label>Cited by at least<select id="mc"><option value="1">1 text</option><option value="2">2 texts</option><option value="3">3 texts</option><option value="4">4 texts</option><option value="5">5 texts</option></select></label>
     <label>Cited in<select id="fs"><option value="">any of the texts</option></select></label>
     <button id="reset" type="button">Reset</button>
@@ -135,12 +136,13 @@ function tabs(){
   $("tabs").innerHTML = t.map(([n,i,c]) => `<button class="tab" data-s="${i}" aria-pressed="${i===sect}">${n}<span class="n">${c.toLocaleString()}</span></button>`).join("");
 }
 function current(){
-  const a = fold($("fa").value.trim()), t = fold($("ft").value.trim()), y1 = parseInt($("y1").value), y2 = parseInt($("y2").value), mc = +$("mc").value, fs = $("fs").value;
+  const a = fold($("fa").value.trim()), t = fold($("ft").value.trim()), y1 = parseInt($("y1").value), y2 = parseInt($("y2").value), mc = +$("mc").value, fs = $("fs").value, ty = $("ty").value;
   const aw = a.split(/\s+/).filter(Boolean), tw = t.split(/\s+/).filter(Boolean);
   let out = R.filter(r => (sect < 0 || r[0] === sect) && (r[10] >= mc || (mc === 1 && r[14] === 1))   // our own texts are listed even when no other text cites them
     && aw.every(w => r.fa.includes(w)) && tw.every(w => r.ft.includes(w))
     && (isNaN(y1) || (r.yn && r.yn >= y1)) && (isNaN(y2) || (r.yn && r.yn <= y2))
-    && (!fs || r[12].includes(fs)));
+    && (!fs || r[12].includes(fs))
+    && (!ty || (ty === "other" ? !["book","article","chapter"].includes(r[5]) : r[5] === ty)));
   const cmp = (x,y) => {
     let v;
     if(sortK === 10) v = (x[10]-y[10]) || (x[11]-y[11]);
@@ -224,15 +226,15 @@ $("tb").addEventListener("click", e => { const tr = e.target.closest("tr.r");
   if(tr && e.shiftKey){ e.preventDefault(); const title = R[+tr.dataset.i][3]; copyText(title).then(ok => toast(ok ? "Copied title: " + (title.length > 70 ? title.slice(0,70) + "…" : title) : "Could not copy")); return; }
   if(e.target.closest("a")) return;
   if(!tr || window.getSelection().toString()) return; const i = +tr.dataset.i; sel = (sel === i) ? -1 : i; render(); });
-["fa","ft","y1","y2","mc","fs"].forEach(id => $(id).addEventListener("input", () => { limit = 400; render(); }));
+["fa","ft","y1","y2","mc","fs","ty"].forEach(id => $(id).addEventListener("input", () => { limit = 400; render(); }));
 $("more").addEventListener("click", () => { limit = Infinity; render(); });
-$("reset").addEventListener("click", () => { ["fa","ft","y1","y2"].forEach(id => $(id).value = ""); $("mc").value = "1"; $("fs").value = ""; sect = -1; sortK = 10; sortDir = -1; limit = 400; sel = -1; tabs(); render(); });
+$("reset").addEventListener("click", () => { ["fa","ft","y1","y2"].forEach(id => $(id).value = ""); $("mc").value = "1"; $("fs").value = ""; $("ty").value = ""; sect = -1; sortK = 10; sortDir = -1; limit = 400; sel = -1; tabs(); render(); });
 const used = Object.keys(SRC).filter(s => R.some(r => r[12].includes(s))).sort((x,y) => SRC[x].localeCompare(SRC[y]));
 $("fs").innerHTML += used.map(s => `<option value="${s}">${esc(SRC[s])}</option>`).join("");
 $("srcs").innerHTML = Object.keys(SRC).sort((x,y) => SRC[x].localeCompare(SRC[y])).map(s => `<li>${esc(SRC[s])} — ${R.filter(r => r[12].includes(s)).length} works</li>`).join("");
 $("lede").textContent = `${R.length.toLocaleString()} works on museums, their history and their theory, drawn from the bibliographies and notes of ${Object.keys(SRC).length} books and articles. Duplicates are merged; “Cited by” is the number of those texts that cite a work.`;
 function saveState(){
-  const q = new URLSearchParams(); const v = {s:sect, a:$("fa").value, t:$("ft").value, y1:$("y1").value, y2:$("y2").value, mc:$("mc").value, fs:$("fs").value, k:sortK, d:sortDir, all: limit === Infinity ? 1 : "", sel: sel >= 0 ? sel : ""};
+  const q = new URLSearchParams(); const v = {s:sect, a:$("fa").value, t:$("ft").value, y1:$("y1").value, y2:$("y2").value, mc:$("mc").value, fs:$("fs").value, ty:$("ty").value, k:sortK, d:sortDir, all: limit === Infinity ? 1 : "", sel: sel >= 0 ? sel : ""};
   const def = {s:-1, mc:"1", k:10, d:-1};
   for(const k in v) if(v[k] !== "" && String(v[k]) !== String(def[k])) q.set(k, v[k]);
   try{ history.replaceState(null, "", q.toString() ? "#" + q.toString() : location.pathname + location.search); }catch(e){}
@@ -240,7 +242,7 @@ function saveState(){
 (function loadState(){
   const q = new URLSearchParams(location.hash.slice(1));
   if(q.has("s")) sect = +q.get("s");
-  [["a","fa"],["t","ft"],["y1","y1"],["y2","y2"],["mc","mc"],["fs","fs"]].forEach(([k,id]) => { if(q.has(k)) $(id).value = q.get(k); });
+  [["a","fa"],["t","ft"],["y1","y1"],["y2","y2"],["mc","mc"],["fs","fs"],["ty","ty"]].forEach(([k,id]) => { if(q.has(k)) $(id).value = q.get(k); });
   if(q.has("k")) sortK = +q.get("k"); if(q.has("d")) sortDir = +q.get("d"); if(q.get("all")) limit = Infinity; if(q.has("sel") && R[+q.get("sel")]) sel = +q.get("sel");
 })();
 tabs(); render();
